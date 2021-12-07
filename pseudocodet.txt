@@ -1,0 +1,377 @@
+
+Declare
+obj.tk
+class tk
+{
+
+Variables
+public:
+    double value;
+    char type;
+    string name;
+    tk(char ch) : type(ch), value(0) { }
+    tk(char ch, double v) : type(ch), value(v) { }
+    tk(char ch, string n) : type(ch), name(n) { }
+};
+
+
+
+Declare
+obj.tk_stream
+class tk_stream
+{
+public:
+    tk_stream();
+    tk get();
+
+Variables:
+    void putback(tk t);
+    void ignore(char c);
+private:
+    bool full;
+    tk buffer;
+};
+
+
+
+tk_stream::tk_stream()
+:full(false), buffer(0)
+{
+}
+
+
+
+void tk_stream::putback(tk t)
+{
+Statement    if(full) error("Error");
+    buffer = t;
+    full = true;
+}
+
+
+
+tk tk_stream::get()
+{
+Statement    if(full)
+    {
+        full = false;
+        return buffer;
+    }  
+    char ch;
+Input    cin >> ch;
+
+Statement Entry    switch (ch)
+    {
+Entry Reference   case print:
+Entry Reference   case back:
+Entry Reference   case '=':
+Entry Reference   case '(':
+Entry Reference   case ')':
+Entry Reference   case '+':
+Entry Reference   case '-':
+Entry Reference   case '*':
+Entry Reference   case '/': 
+Entry Reference   case '%':
+    return tk(ch);
+Entry Reference   case '.':
+Entry Reference   case '0':
+Entry Reference   case '1':
+Entry Reference   case '2':
+Entry Reference   case '3':
+Entry Reference   case '4':
+Entry Reference   case '5':
+Entry Reference   case '6':
+Entry Reference   case '7':
+Entry Reference   case '8':
+Entry Reference   case '9':
+    {
+Input        cin.putback(ch);
+        double v;
+Input        cin >> v;
+    return tk(num, v);
+    }
+    default:
+Statement        if(isalpha(ch))
+        {
+            string s;
+            s += ch;
+            while(cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s+=ch;
+Input            cin.putback(ch);
+Statement            if(s == amount) return tk(allow);
+Statement            if(s == constant) return tk(c);
+        return tk(name, s);
+        }
+        error("Invalid input");
+    }
+}
+
+
+void tk_stream::ignore(char c)
+{
+Statement    if(full && c == buffer.type)
+    {
+        full = false;
+        return;
+    }
+    full = false;
+    char ch = 0;
+    while(cin>>ch)
+Statement    if(ch == c)
+        return;
+}
+
+tk_stream ts;
+
+Declare
+class parameter
+{
+public:
+    string name;
+    double value;
+	bool p;
+    parameter(string n, double v, bool va = true) : name(n), value(v), p(va) { }
+};
+
+vector<parameter> p_table;
+
+
+
+Variable
+void set_value(string s, double d)
+{
+Statement    for(int i = 0; i<p_table.size(); ++i)
+Statement        if(p_table[i].name == s)
+        {
+Statement			if(p_table[i].p == false) error(s, " ");
+            p_table[i].value = d;
+            return;
+        }
+    error("Error", s);
+}
+
+double amount_value(string s)
+{
+Statement    for(int i = 0; i<p_table.size(); ++i)
+Statement    if(p_table[i].name == s) return p_table[i].value;
+        error("Error", s);
+}
+
+
+
+Variable
+bool toAmount(string p)
+{
+Statement    for(int i = 0; i<p_table.size(); ++i)
+Statement    if(p_table[i].name == p)
+    return true; 
+    return false;
+}
+
+
+
+Procedure
+double define_name(string s, double v, bool p = true)
+{
+Statement    if(toAmount(s)) error(s, "Invalid input");
+    p_table.push_back(parameter(s, v, p));
+    return v;
+}
+
+double expression();
+
+
+
+Variable
+double sign()
+{
+    tk t = ts.get();
+Statement Entry    switch(t.type)
+    {
+Entry    case '(':
+        {
+            double d = expression();
+            t = ts.get();
+Statement            if(t.type != ')') error("place: ')'");
+            return d;
+        }
+Entry    case num:    
+    return t.value;
+Entry    case name:
+		{
+			tk next = ts.get();
+Statement			if(next.type == '=')
+            {
+				double d = expression();
+				set_value(t.name, d);
+				return d;
+			}
+			else
+            {
+				ts.putback(next);
+				return amount_value(t.name);
+			}
+		}
+Entry    case '-':
+    return - sign();
+Entry    case '+':
+    return sign();
+    default:
+        error("Error");
+    }
+}
+
+
+
+Variable
+double exp(tk k)
+{
+    tk t = ts.get();
+Statement    if(t.type != name) error("Invalid input");
+        string p_name = t.name;
+        tk t2 = ts.get();
+Statement    if(t2.type != '=') error("Invalid input", p_name);
+        double d = expression();
+        define_name(p_name, d, k.type == allow);
+    return d;
+}
+
+
+
+Variable
+double statement()
+{
+    tk t = ts.get();
+Statement Entry    switch(t.type)
+    {
+Entry    case allow:
+Entry	case c:
+        return exp(t.type);
+    default:
+        ts.putback(t);
+        return expression();
+    }
+}
+
+
+
+Variable
+double expression()
+{
+    double left = term();
+    tk t = ts.get();
+    while(true)
+    {    
+Statement Entry        switch(t.type)
+        {
+Entry        case '+':
+            left += term();
+            t = ts.get();
+            break;
+Entry        case '-':
+            left -= term();
+            t = ts.get();
+            break;
+        default:
+            ts.putback(t);
+            return left;
+        }
+    }
+}
+
+
+
+Variable
+double term()
+{
+    double left = sign();
+    tk t = ts.get();
+    while(true)
+    {
+Statement Entry        switch(t.type)
+        {
+Entry        case '*':
+            left *= sign();
+            t = ts.get();
+            break;
+Entry        case '/':
+            {    
+                double d = sign();
+Statement                if(d == 0) error("place: 0");
+                left /= d;
+                t = ts.get();
+                break;
+            }
+Entry        case '%':
+            {    
+                int i1 = narrow_cast<int>(left);
+                int i2 = narrow_cast<int>(term());
+Statement                if(i2 == 0) error("place: 0");
+                left = i1%i2;
+                t = ts.get();
+                break;
+            }
+        default:
+            ts.putback(t);
+            return left;
+        }
+    }
+}
+
+
+
+Variable
+void errorAmount()
+{ 
+    ts.ignore(print);
+}
+
+
+
+Variable
+void calculator()
+{
+    while(cin)
+    try
+    {
+Output        cout << prompt;
+        tk t = ts.get();
+        while(t.type == print) t=ts.get();
+Statement        if(t.type == back) return;
+        ts.putback(t);
+Output        cout << result << statement() << endl;
+    }
+    catch(exception& e)
+    {
+        cerr << e.what() << endl;
+        errorAmount();
+    }
+}
+
+
+
+Function
+int main()
+try
+{
+    define_name("Pi", 3.14159, false);
+    define_name("Euler", 2.71828, false);
+    keep_window_open();
+    calculator();
+    return 0;
+}
+catch(exception& e)
+{
+    cerr << e.what() << endl;
+    keep_window_open(" \n");
+    return 1;
+}
+catch(...)
+{
+    cerr << "Invalid\n";
+    keep_window_open(" \n");
+    return 2;
+}
+
+Result: Created a program that meets all of the listed requirements in Chapter 7 Excercises 1, 2, and 3.
+Using coinciding functions and statements for each excerise, I was able to combine all three excercises to run one program.
+The excerises had differents tasks to include into the program, e.g. I inserted the const function all throughout the program for excercise 3.
